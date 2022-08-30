@@ -1,5 +1,6 @@
 const crud = require("../../CRUD/index");
 const { procurarUsers } = require("../Users/Users.handler");
+const { procurarOrderProduct } = require("../OrderProducts/OrderProducts.handler");
 const tabela = "Orders"
 
 async function procurarOrders() {
@@ -32,15 +33,31 @@ async function criarOrder(dados) {
 
 async function editarOrder(dados, id) {
     antigoOrder = crud.buscarPorId(id);
+    let status = null;
     if (dados.status) {
         if (antigoOrder.status == "Aberto" || antigoOrder.status == "aberto") {
             if (dados.status == "Fechado" || dados.status == "fechado") {
-
+                if ((await procurarOrderProduct()).filter((OrderProducts) => OrderProducts.orderId == id && OrderProducts.quantity > 0) != "") {
+                    status = "Fechado";
+                } else {
+                    return "Erro! Para mudar para o status 'Fechado', necessita ter algum item no pedido!";
+                }
             } else {
-                return "Erro! Os status precisa ser 'Fechado' se estiver 'Aberto'"
+                return "Erro! Os status precisa ser 'Aberto' se quiser mudar para 'Fechado'"
             }
+        } else if (antigoOrder.status == "Fechado" || antigoOrder.status == "fechado") {
+            if (dados.status == "Aberto" || dados.status == "aberto") {
+                status = "Aberto";
+            } else {
+                return "Erro! Os status precisa ser 'Fechado' se quiser mudar para 'Aberto'"
+            }
+            dadosNovo = {
+                number: antigoOrder.number,
+                userId: antigoOrder.userId,
+                status: status
+            }
+            return await crud.salvar(tabela, id, dadosNovo);
         }
-        return await crud.salvar(tabela, id, dados);
     } else {
         return "Erro! Precisa inserir o status!"
     }
