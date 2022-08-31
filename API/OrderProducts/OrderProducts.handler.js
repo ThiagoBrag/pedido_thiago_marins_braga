@@ -13,35 +13,40 @@ async function procurarOrderProduct(id) {
 
 async function criarOrderProduct(dados) {
     if (dados.productId && dados.quantity && dados.orderId) {
-        if ((await procurarOrders()).filter((Orders) => Orders.id == dados.orderId) != "") {
-            if ((await procurarOrders()).filter((Orders) => Orders.id == dados.orderId && Orders.status == "Aberto" || Orders.status == "aberto") != "") {
-                if ((await procurarProducts()).filter((Products) => Products.id == dados.productId) != "") {
-                    if ((await procurarOrderProducts()).filter((OrderProducts) => OrderProducts.orderId == dados.orderId && OrderProducts.productId == dados.productId) == "") {
-                        return await crud.salvar(tabela, false, dados);
+        if (dados.quantity > 0) {
+            if ((await procurarOrders()).filter((Orders) => Orders.id == dados.orderId) != "") {
+                if ((await procurarOrders()).filter((Orders) => Orders.id == dados.orderId && Orders.status == "Aberto" || Orders.status == "aberto") != "") {
+                    if ((await procurarProducts()).filter((Products) => Products.id == dados.productId) != "") {
+                        if ((await procurarOrderProducts()).filter((OrderProducts) => OrderProducts.orderId == dados.orderId && OrderProducts.productId == dados.productId) == "") {
+                            return await crud.salvar(tabela, false, dados);
+                        } else {
+                            const listaOrderProduct = await (await procurarOrderProducts()).filter((OrderProducts) => OrderProducts.productId == dados.productId && OrderProducts.orderId == dados.orderId);
+                            let idOrderProduct = null;
+                            let quantidadeAntiga = null;
+                            for (const OrderProduct of listaOrderProduct) {
+                                idOrderProduct = OrderProduct.id;
+                                quantidadeAntiga = OrderProduct.quantity
+                            }
+                            dados = {
+                                id: idOrderProduct,
+                                productId: dados.productId,
+                                quantity: (quantidadeAntiga+dados.quantity),
+                                orderId: dados.orderId
+                            }
+                            return await editarOrderProduct(dados, idOrderProduct);
+                        }
                     } else {
-                        const listaOrderProduct = await (await procurarOrderProducts()).filter((OrderProducts) => OrderProducts.productId == dados.productId && OrderProducts.orderId == dados.orderId);
-                        let idOrderProduct = null;
-                        let quantidadeAntiga = null;
-                        for (const OrderProduct of listaOrderProduct) {
-                            idOrderProduct = OrderProduct.id;
-                            quantidadeAntiga = OrderProduct.quantity
-                        }
-                        dados = {
-                            id: idOrderProduct,
-                            productId: dados.productId,
-                            quantity: (quantidadeAntiga+dados.quantity),
-                            orderId: dados.orderId
-                        }
-                        return await editarOrderProduct(dados, idOrderProduct);
+                        return "Erro! Produto inexistente!";
                     }
                 } else {
-                    return "Erro! Produto inexistente!";
+                    return "Erro! Status do pedido não está 'Aberto'!";
                 }
             } else {
-                return "Erro! Status do pedido não está 'Aberto'!";
+                return "Erro! Order inexistente!";
             }
         } else {
-            return "Erro! Order inexistente!";
+            return "Erro! A quantidade precisa ser maior que 0!";
+
         }
     } else {
         return "Erro! Falta algum dado!"
