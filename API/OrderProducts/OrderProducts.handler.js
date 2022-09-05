@@ -46,7 +46,6 @@ async function criarOrderProduct(dados) {
             }
         } else {
             return "Erro! A quantidade precisa ser maior que 0!";
-
         }
     } else {
         return "Erro! Falta algum dado!"
@@ -73,11 +72,50 @@ async function editarOrderProduct(dados, id) {
     }
 }
 
+async function deletarProduct(id, idProduct, dados) {
+    if ((await procurarProducts()).filter((Products) => Products.id == idProduct) != "") {
+        if (dados.quantity && dados.orderId) {
+            if ((await procurarOrders()).filter((Orders) => Orders.id == dados.orderId) != "") {
+                if ((await procurarOrders()).filter((Orders) => Orders.id == dados.orderId && Orders.status == "Aberto" || Orders.status == "aberto") != "") {
+                    
+                        const listaOrderProduct = await (await procurarOrderProducts()).filter((OrderProducts) => OrderProducts.productId == dados.productId && OrderProducts.orderId == dados.orderId);
+                        let idOrderProduct = null;
+                        let quantidadeAntiga = null;
+                        for (const OrderProduct of listaOrderProduct) {
+                            idOrderProduct = OrderProduct.id;
+                            quantidadeAntiga = OrderProduct.quantity
+                        }
+                        if (dados.quantity > quantidadeAntiga) {
+                            return "Erro! Quantidade inserida é maior que a atual!"
+                        } else {
+                            dados = {
+                                id: idOrderProduct,
+                                productId: dados.productId,
+                                quantity: (quantidadeAntiga-dados.quantity),
+                                orderId: dados.orderId
+                            }
+                            return await crud.salvar(tabela, id, dados);
+                        }
+                } else {
+                    return "Erro! Status do pedido não está 'Aberto'!";
+                }
+            } else {
+                return "Erro! Order inexistente!";
+            }
+        } else {
+            return "Erro! Falta algum dado! (Verifique se tem quantidade e id do pedido)"
+        }
+    } else {
+        return "Erro! Produto inexistente!";
+    }
+   
+}
+
 async function deletarOrderProduct(id) {
     return await crud.remover(tabela, id);
 }
 
 
 module.exports = {
-    procurarOrderProducts, procurarOrderProduct, criarOrderProduct, editarOrderProduct, deletarOrderProduct
+    procurarOrderProducts, procurarOrderProduct, criarOrderProduct, editarOrderProduct, deletarProduct, deletarOrderProduct
 };
